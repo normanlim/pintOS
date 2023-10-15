@@ -94,22 +94,22 @@ void
 timer_sleep (int64_t ticks) 
 {
   int64_t start = timer_ticks ();
-
-  ASSERT (intr_get_level () == INTR_ON);
-
-
   struct thread* current_thread = thread_current();
   enum intr_level old_level;
-  old_level = intr_disable();
 
-  int64_t wakeup_time = (timer_elapsed(start) + ticks);
+  ASSERT (intr_get_level () == INTR_ON);
+  if (ticks <= 0)
+  {
+    return;
+  }
+
+
+  int64_t wakeup_time = (start + ticks);
   current_thread->wakeup_time = wakeup_time;
 
+  old_level = intr_disable();
   list_insert_ordered(&sleeping_threads, &current_thread->elem, &compare_wakeup_times, NULL);
-
   thread_block();
-
-
   intr_set_level(old_level);
 }
 
@@ -189,7 +189,7 @@ static void check_sleeping_threads(void)
   while (!list_empty(&sleeping_threads)){
     struct list_elem* curr_elem = list_begin(&sleeping_threads);
     struct thread* thread_wrapper = list_entry(curr_elem, struct thread, elem);
-
+    
     if (thread_wrapper->wakeup_time <= ticks)
     {
 	list_remove(curr_elem);
