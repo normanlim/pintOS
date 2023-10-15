@@ -20,6 +20,9 @@
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
+/* List of threads who are sleeping */
+static struct list sleeping_threads;
+
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
@@ -92,8 +95,22 @@ timer_sleep (int64_t ticks)
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+
+
+  struct thread* current_thread = thread_current();
+  int64_t wakeup_time = (timer_elapsed(start) + ticks);
+  current_thread->wakeup_time = wakeup_time;
+
+  enum intr_level old_level;
+  old_level = intr_disable();
+
+
+  list_insert_ordered(&sleeping_threads, &current_thread->elem, &compare_wakeup_time, NULL);
+
+  thread_block();
+
+
+  intr_set_level(old_level);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
