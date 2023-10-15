@@ -182,12 +182,32 @@ timer_print_stats (void)
 {
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
-
+
+/* Checks sleeping_threads to see if they need to be woken up */
+static void check_sleeping_threads()
+{
+  while (!list_empty(&sleeping_threads)){
+    struct list_elem* curr_elem = list_begin(&sleeping_threads);
+    struct thread* thread_wrapper = list_entry(e, struct thread, elem);
+
+    if (thread_wrapper->wakeup_time <= ticks)
+    {
+	thread_unblock(thread_wrapper);
+    } 
+    else 
+    {
+      break; // If here, everything remaining in list has greater wakeup_time.
+    }
+  }
+}
+
+
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+  check_sleeping_threads();
   thread_tick ();
 }
 

@@ -73,7 +73,7 @@ static tid_t allocate_tid (void);
 
 
 /* Comparator function for two thread wakeup_times */
-int compare_wakeup_times(strtuct thread* a, struct thread* b)
+int compare_wakeup_times(struct thread* a, struct thread* b)
 {
   return (a->wakeup_time) - (b->wakeup_time);
 }
