@@ -73,9 +73,11 @@ static tid_t allocate_tid (void);
 
 
 /* Comparator function for two thread wakeup_times */
-int compare_wakeup_times(struct thread* a, struct thread* b)
+bool compare_wakeup_times(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
-  return (a->wakeup_time) - (b->wakeup_time);
+  struct thread *thread_a = list_entry(a, struct thread, elem);
+  struct thread *thread_b = list_entry(b, struct thread, elem);
+  return (thread_a->wakeup_time) < (thread_b->wakeup_time);
 }
 
 /* Initializes the threading system by transforming the code
@@ -382,7 +384,7 @@ thread_get_recent_cpu (void)
   /* Not yet implemented. */
   return 0;
 }
-
+
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by

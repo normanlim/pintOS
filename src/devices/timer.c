@@ -40,6 +40,7 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  list_init(&sleeping_threads);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -98,14 +99,13 @@ timer_sleep (int64_t ticks)
 
 
   struct thread* current_thread = thread_current();
-  int64_t wakeup_time = (timer_elapsed(start) + ticks);
-  current_thread->wakeup_time = wakeup_time;
-
   enum intr_level old_level;
   old_level = intr_disable();
 
+  int64_t wakeup_time = (timer_elapsed(start) + ticks);
+  current_thread->wakeup_time = wakeup_time;
 
-  list_insert_ordered(&sleeping_threads, &current_thread->elem, &compare_wakeup_time, NULL);
+  list_insert_ordered(&sleeping_threads, &current_thread->elem, &compare_wakeup_times, NULL);
 
   thread_block();
 
@@ -184,14 +184,15 @@ timer_print_stats (void)
 }
 
 /* Checks sleeping_threads to see if they need to be woken up */
-static void check_sleeping_threads()
+static void check_sleeping_threads(void)
 {
   while (!list_empty(&sleeping_threads)){
     struct list_elem* curr_elem = list_begin(&sleeping_threads);
-    struct thread* thread_wrapper = list_entry(e, struct thread, elem);
+    struct thread* thread_wrapper = list_entry(curr_elem, struct thread, elem);
 
     if (thread_wrapper->wakeup_time <= ticks)
     {
+	list_remove(curr_elem);
 	thread_unblock(thread_wrapper);
     } 
     else 
@@ -207,8 +208,8 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
-  check_sleeping_threads();
   thread_tick ();
+  check_sleeping_threads();
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

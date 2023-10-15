@@ -109,7 +109,7 @@ struct thread
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
 
-int compare_wakeup_times(struct thread* a, struct thread* b);
+bool compare_wakeup_times(const struct list_elem *, const struct list_elem *, void *);
 
 void thread_init (void);
 void thread_start (void);
