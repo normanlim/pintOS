@@ -138,10 +138,12 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
+int thread_calculate_mlfq_priority();
 
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+int thread_calculate_mlfq_recent_cpu();
 
 #endif /* threads/thread.h */
