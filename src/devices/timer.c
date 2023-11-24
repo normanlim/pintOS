@@ -4,7 +4,6 @@
 #include <round.h>
 #include <stdio.h>
 #include "devices/pit.h"
-#include "threads/fixed-point.h"
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
@@ -210,21 +209,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-  if (thread_mlfqs)
-  {
-		thread_current()->recent_cpu = INT_ADD(thread_current()->recent_cpu, 1); 
-		if (ticks % TIMER_FREQ == 0)
-		{
-			struct list_elem* curr_elem = list_begin(all_list);
-			while (!list_end(curr_elem))
-			  struct thread *curr_thread = list_entry(curr_elem, struct thread, elem);
-		  
-			curr_thread->recent_cpu = thread_calculate_mlfq_recent_cpu();
-
-			curr_elem = list_next(curr_elem);
-		}
-  }
-
   check_sleeping_threads();
 }
 
