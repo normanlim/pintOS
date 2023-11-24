@@ -59,7 +59,6 @@ static long long user_ticks;    /* # of timer ticks in user programs. */
 
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
-#define DEFAULT_NICE 0
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
 
 /* If false (default), use round-robin scheduler.
@@ -154,12 +153,6 @@ thread_tick (void)
 #ifdef USERPROG
   else if (t->pagedir != NULL)
     user_ticks++;
-
-  if ((user_ticks % TIME_SLICE) == 0)
-  {
-    t->priority = thread_calculate_mlfq_priority();
-  }
-
 #endif
   else
     kernel_ticks++;
@@ -397,13 +390,6 @@ thread_get_load_avg (void)
   return FP_TO_INT_ROUND_NEAREST(100 * load_avg);
 }
 
-/* Returns 100 times the current thread's recent_cpu value. */
-int
-thread_get_recent_cpu (void) 
-{
-  return FP_TO_INT_ROUND_NEAREST(100 * thread_current()->recent_cpu);
-}
-
 void
 thread_calculate_load_avg()
 {
@@ -411,10 +397,11 @@ thread_calculate_load_avg()
   load_avg = FP_MUL(INT_TO_FP(59)/60, load_avg) + FP_MUL(INT_TO_FP(1)/60, ready_threads);
 }
 
-int thread_calculate_mlfq_recent_cpu()
+/* Returns 100 times the current thread's recent_cpu value. */
+int
+thread_get_recent_cpu (void) 
 {
-  return INT_ADD (FP_MUL (FP_DIV ((load_avg * 2), INT_ADD ((load_avg * 2), 1)), thread_current()->recent_cpu), thread_current()->nice);
-
+  return FP_TO_INT_ROUND_NEAREST(100 * thread_current()->recent_cpu);
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -504,19 +491,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-
-  if (thread_mlfqs)
-  {
-    t->niceness = DEFAULT_NICE;
-    if (t != initial_thread)
-    {
-      t->recent_cpu = thread_get_recent_cpu();
-    }
-    else
-    {
-      t->recent_cpu = 0;
-    }
-  }
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
