@@ -223,6 +223,18 @@ thread_create (const char *name, int priority,
   return tid;
 }
 
+/* Sort the ready list based on priority */
+void sort_ready_list (struct thread *t)
+{
+  ASSERT (t->status == THREAD_READY); 
+  enum intr_level old_level = intr_disable ();
+
+  list_remove (&t->elem);
+  list_insert_ordered (&ready_list, &t->elem, compare_threads_priority, NULL);
+
+  intr_set_level (old_level);
+}
+
 /* Puts the current thread to sleep.  It will not be scheduled
    again until awoken by thread_unblock().
 
@@ -350,11 +362,49 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+void tick_every_second (void) {
+  /* Calc load average every 100 ticls i.e. every second */
+  /* Calc Recent CPU for all */
+  
+  enum intr_level old_level = intr_disable();
+
+  int num_ready_threads = list_size(&ready_list);
+
+  if (thread_current() != idle_thread) {
+    num_ready_threads++;
+  }
+
+  /* load_avg = (59/60)*load_avg + (1/60)*ready_threads. */
+  load_avg = ADD_FP(
+    DIVIDE_FP(MULTIPLY_FP(load_avg, 59), 60),
+    DIVIDE_FP(CONVERT_TO_FP(num_ready_threads), 60)
+  );
+
+  /* calc rectent cpu and priority for all threads */
+  thread_foreach(thread_set_recent_cpu, NULL);
+  intr_set_level(old_level);
+}
+
+void set_sleeping_thread (int64_t ticks)
+{
+  struct thread *current = thread_current ();
+  current->remaining_time = ticks;
+  list_push_back (&sleeping_list, &current->sleep_element);
+  thread_block ();
+}
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
 {
+  enum intr_level old_level = intr_disable();
+
   thread_current()->priority = new_priority;
+  update_thread (thread_current ());
+  
+  intr_set_level(old_level);
+
+  check_thread_yield ();
 }
 
 /* Returns the current thread's priority. */
@@ -369,6 +419,10 @@ void
 thread_set_nice (int nice) 
 {
   thread_current()->nice = nice;
+
+  /* Change priority everytime you update the niceness of a thread*/
+  thread_update_priority_mlfqs (thread_current ());
+  check_thread_yield ();
 }
 
 /* Returns the current thread's nice value. */
@@ -385,11 +439,56 @@ thread_get_load_avg (void)
   return CONVERT_TO_INT_NEAREST(MULTIPLY_FP(load_avg, 100));
 }
 
+/* Calc recent CPU for a thread */
+void
+thread_set_recent_cpu(struct thread *t, void *aux UNUSED) {
+  /* recent_cpu = (2*load_avg)/(2*load_avg + 1) * recent_cpu + nice. */
+  fp twice_of_load_avg = MULTIPLY_FP(load_avg, 2);
+  int new_recent_cpu = ADD_INTEGER( 
+                                  DIVIDE_INTEGER(
+                                    MULTIPLY_INTEGER(twice_of_load_avg, t->recent_cpu),
+                                    ADD_INTEGER(twice_of_load_avg, 1)
+                                  ),
+                                  t->nice
+                                );
+  t->recent_cpu = new_recent_cpu;
+  thread_update_priority_mlfqs(t);
+}
+
+void thread_update_priority_mlfqs(struct thread *t)
+{
+  /* priority = PRI_MAX - (recent_cpu / 4) - (nice * 2). */
+  int new_priority =  (int) CONVERT_TO_INT_NEAREST(
+                                                  SUB_FP (CONVERT_TO_FP ((PRI_MAX - ((t->nice) * 2))),
+						                                      DIVIDE_FP (t->recent_cpu, 4))
+                                                  );
+  if (new_priority > PRI_MAX)
+      new_priority = PRI_MAX;
+  else if (new_priority < PRI_MIN)
+      new_priority = PRI_MIN;
+  t->priority = new_priority;
+}
+
+// update the priorities (not mlfqs)
+void update_thread (struct thread *t)
+{
+  enum intr_level old_level = intr_disable ();
+  int our_priority = t->our_priority;
+  if (list_empty (&t->held_lock))
+      t->priority = our_priority;
+  else
+  {
+      int priority = list_entry (list_max (&t->held_lock, compare_locks, NULL), struct lock, elem)->max_p;
+      t->priority = our_priority > priority ? our_priority : priority;
+  }
+  intr_set_level (old_level);
+}
+
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  return CONVERT_TO_INT_NEAREST(MULTIPLY_FP(thread_current()->recent_cpu, 100));
+  return CONVERT_TO_INT_NEAREST( MULTIPLY_FP(thread_current()->recent_cpu, 100) );
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -556,6 +655,24 @@ thread_schedule_tail (struct thread *prev)
       ASSERT (prev != cur);
       palloc_free_page (prev);
     }
+}
+
+bool compare_threads_priority (const struct list_elem *t1, const struct list_elem *t2, void *aux UNUSED)
+{
+  return list_entry(t1, struct thread, elem)->priority <= list_entry (t2, struct thread, elem)->priority;
+}
+
+void check_thread_yield () {
+  enum intr_level old_level = intr_disable();
+
+  /* check if list is not empty and if so check if the lat element in the list has a priority */
+  bool isPriority = !list_empty (&ready_list) && list_entry (list_back (&ready_list), struct thread, elem)->priority > thread_get_priority ();
+
+  intr_set_level(old_level);
+
+  if(isPriority){
+    thread_yield();
+  }
 }
 
 /* Schedules a new process.  At entry, interrupts must be off and

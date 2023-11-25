@@ -152,9 +152,9 @@ void check_thread_yield (void);
 void tick_every_second (void);
 void set_sleeping_thread (int64_t);
 void update_thread (struct thread *);
-void rearrange_ready_list (struct thread *);
-void thread_update_recent_cpu(struct thread *, void *);
+void sort_ready_list (struct thread *);
+void thread_set_recent_cpu (struct thread *, void *);
 void thread_update_priority_mlfqs(struct thread *);
-bool compare_threads (const struct list_elem *, const struct list_elem *, void *);
+bool compare_threads_priority (const struct list_elem *, const struct list_elem *, void *);
 
 #endif /* threads/thread.h */
