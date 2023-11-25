@@ -213,7 +213,7 @@ lock_acquire (struct lock *lock)
                 temporary_lock->max_p = curr;
                 update_thread(temp_lock_holder);
                 if (temp_lock_holder->status == THREAD_READY) {
-                    sort_ready_list(temp_lock_holder);
+                    rearrange_ready_list(temp_lock_holder);
                 }
 
                 temporary_lock = temp_lock_holder->curr_lock;
@@ -401,7 +401,7 @@ cond_broadcast (struct condition *cond, struct lock *lock)
 struct thread * sema_get_max (struct semaphore *sema)
 {
   ASSERT (!list_empty (&sema->waiters));
-  return list_entry (list_max (&sema->waiters, compare_threads_priority, NULL), struct thread, elem);
+  return list_entry (list_max (&sema->waiters, compare_threads, NULL), struct thread, elem);
 }
 void lock_update (struct lock *lock)
 {

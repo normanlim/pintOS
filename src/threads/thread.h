@@ -85,30 +85,30 @@ extern bool thread_mlfqs;
 struct thread
   {
     /* Owned by thread.c. */
-   tid_t tid;                          /* Thread identifier. */
-   enum thread_status status;          /* Thread state. */
-   char name[16];                      /* Name (for debugging purposes). */
-   uint8_t *stack;                     /* Saved stack pointer. */
-   int priority;                       /* Priority. */
-   struct list_elem allelem;          
+    tid_t tid;                          /* Thread identifier. */
+    enum thread_status status;          /* Thread state. */
+    char name[16];                      /* Name (for debugging purposes). */
+    uint8_t *stack;                     /* Saved stack pointer. */
+    int priority;                       /* Priority. */
+    struct list_elem allelem;          
 
     /* Shared between thread.c and synch.c. */
-   struct list_elem elem;              /* List element. */
+    struct list_elem elem;              /* List element. */
 
-   #ifdef USERPROG
-      /* Owned by userprog/process.c. */
-      uint32_t *pagedir;                  /* Page directory. */
-   #endif
+#ifdef USERPROG
+    /* Owned by userprog/process.c. */
+    uint32_t *pagedir;                  /* Page directory. */
+#endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 	struct list_elem sleep_element;
-   struct list held_lock;
+    struct list held_lock;
 	struct lock *curr_lock;       
 	int our_priority;                   
 	int nice;
-   int64_t remaining_time;
-	fp recent_cpu;                 
+    int64_t remaining_time;
+	fixed_point recent_cpu;                 
   };
 
 /* If false (default), use round-robin scheduler.
@@ -152,9 +152,9 @@ void check_thread_yield (void);
 void tick_every_second (void);
 void set_sleeping_thread (int64_t);
 void update_thread (struct thread *);
-void sort_ready_list (struct thread *);
-void thread_set_recent_cpu (struct thread *, void *);
+void rearrange_ready_list (struct thread *);
+void thread_update_recent_cpu(struct thread *, void *);
 void thread_update_priority_mlfqs(struct thread *);
-bool compare_threads_priority (const struct list_elem *, const struct list_elem *, void *);
+bool compare_threads (const struct list_elem *, const struct list_elem *, void *);
 
 #endif /* threads/thread.h */

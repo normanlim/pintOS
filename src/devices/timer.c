@@ -7,7 +7,7 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
-  
+
 /* See [8254] for hardware details of the 8254 timer chip. */
 
 #if TIMER_FREQ < 19
@@ -16,7 +16,6 @@
 #if TIMER_FREQ > 1000
 #error TIMER_FREQ <= 1000 recommended
 #endif
-
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
@@ -175,8 +174,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   if (thread_mlfqs && ticks % TIMER_FREQ == 0)
     tick_every_second ();
-  thread_tick ();
-
+  thread_tick ();  
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
