@@ -4,9 +4,6 @@
 #include <random.h>
 #include <stdio.h>
 #include <string.h>
-
-#include <threads/fixed-point.h>
-
 #include "threads/flags.h"
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
@@ -22,10 +19,6 @@
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
-
-/* Max and Min nice*/
-#define NICE_MAX 20
-#define NICE_MIN -20
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -65,11 +58,6 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
-
-
-/* Load Average */
-int load_avg;
-
 
 static void kernel_thread (thread_func *, void *aux);
 
@@ -119,8 +107,6 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
-
-  load_avg = 0;  
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -370,38 +356,33 @@ thread_get_priority (void)
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice) 
+thread_set_nice (int nice UNUSED) 
 {
-  ASSERT (nice >= NICE_MIN && nice <= NICE_MAX);
-  thread_current()->nice = nice;
+  /* Not yet implemented. */
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  return thread_current()->nice;
+  /* Not yet implemented. */
+  return 0;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  return FP_TO_INT_ROUND_NEAREST(100 * load_avg);
-}
-
-void
-thread_calculate_load_avg()
-{
-  int ready_threads = list_size(&ready_list); // Number of threads in ready list
-  load_avg = FP_MUL(INT_TO_FP(59)/60, load_avg) + FP_MUL(INT_TO_FP(1)/60, ready_threads);
+  /* Not yet implemented. */
+  return 0;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  return FP_TO_INT_ROUND_NEAREST(100 * thread_current()->recent_cpu);
+  /* Not yet implemented. */
+  return 0;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.

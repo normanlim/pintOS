@@ -93,8 +93,6 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-    int nice;
-    uint32_t recent_cpu;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
