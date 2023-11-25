@@ -20,9 +20,6 @@
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
-/* List of threads who are sleeping */
-static struct list sleeping_threads;
-
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
@@ -40,7 +37,6 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
-  list_init(&sleeping_threads);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -93,24 +89,13 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-  int64_t start = timer_ticks ();
-  struct thread* current_thread = thread_current();
-  enum intr_level old_level;
-
-  ASSERT (intr_get_level () == INTR_ON);
   if (ticks <= 0)
-  {
     return;
-  }
+  ASSERT (intr_get_level () == INTR_ON);
 
-
-  int64_t wakeup_time = (start + ticks);
-  current_thread->wakeup_time = wakeup_time;
-
-  old_level = intr_disable();
-  list_insert_ordered(&sleeping_threads, &current_thread->elem, &compare_wakeup_times, NULL);
-  thread_block();
-  intr_set_level(old_level);
+  intr_disable ();
+  set_sleeping_thread (ticks);
+  intr_set_level (INTR_ON);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -183,33 +168,15 @@ timer_print_stats (void)
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
 
-/* Checks sleeping_threads to see if they need to be woken up */
-static void check_sleeping_threads(void)
-{
-  while (!list_empty(&sleeping_threads)){
-    struct list_elem* curr_elem = list_begin(&sleeping_threads);
-    struct thread* thread_wrapper = list_entry(curr_elem, struct thread, elem);
-    
-    if (thread_wrapper->wakeup_time <= ticks)
-    {
-	list_remove(curr_elem);
-	thread_unblock(thread_wrapper);
-    } 
-    else 
-    {
-      break; // If here, everything remaining in list has greater wakeup_time.
-    }
-  }
-}
-
-
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+  if (thread_mlfqs && ticks % TIMER_FREQ == 0)
+    tick_every_second ();
   thread_tick ();
-  check_sleeping_threads();
+
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
