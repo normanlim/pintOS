@@ -25,6 +25,6 @@ $pintos -v -k -T 60 --bochs -- -q run alarm-multiple
 Based off Stanford's PintOS assignment: [Unit 2.2.4 - Advanced Scheduler](https://web.stanford.edu/class/cs140/projects/pintos/pintos_2.html#SEC27)
 ```bash
 $cd pintos/src/threads
-$make && make
+$make clean && make
 $make grade
 ```
